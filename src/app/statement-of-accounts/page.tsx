@@ -154,7 +154,7 @@ const StatementOfAccounts = () => {
 
     try {
       const isEditing = editingAccount !== null
-      const url = isEditing ? "/api/account-update" : "/api/account-create"
+      const url = isEditing ? "/api/account-update" : "/api/accounts"
       const body = isEditing
         ? {
             accountId: editingAccount?.id,

@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
 
   const token = authHeader.split(" ")[1]
   const payload = verifyToken(token) // Using your verifyToken function
-
   if (!payload || !payload.userId) {
     return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 })
   }
@@ -53,16 +52,12 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ accounts })
   } catch (error: unknown) {
-    // Changed 'any' to 'unknown'
     console.error("Error fetching accounts:", error)
     let errorMessage = "Internal Server Error: Failed to fetch accounts"
     if (error instanceof Error) {
       errorMessage = error.message
     }
-    return NextResponse.json(
-      { error: errorMessage, details: errorMessage }, // Use errorMessage for details
-      { status: 500 },
-    )
+    return NextResponse.json({ error: errorMessage, details: errorMessage }, { status: 500 })
   }
 }
 
@@ -78,7 +73,6 @@ export async function POST(req: NextRequest) {
 
   const token = authHeader.split(" ")[1]
   const payload = verifyToken(token) // Using your verifyToken function
-
   if (!payload || !payload.userId) {
     return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 })
   }
@@ -148,11 +142,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: "Account created successfully", account: newAccount }, { status: 201 })
   } catch (error: unknown) {
-    // Changed 'any' to 'unknown'
     console.error("Error creating account:", error)
     // Handle Prisma unique constraint violation error specifically
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
-      // Prisma error code for unique constraint violation
       return NextResponse.json(
         { error: "Conflict: An account with this code already exists for this company." },
         { status: 409 },
@@ -162,9 +154,6 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
       errorMessage = error.message
     }
-    return NextResponse.json(
-      { error: errorMessage, details: errorMessage }, // Use errorMessage for details
-      { status: 500 },
-    )
+    return NextResponse.json({ error: errorMessage, details: errorMessage }, { status: 500 })
   }
 }
