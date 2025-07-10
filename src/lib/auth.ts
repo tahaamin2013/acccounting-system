@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { prisma } from "./prisma"
@@ -275,13 +274,13 @@ export async function initializeDefaultAccounts(companyId: string) {
         companyId,
         ...account,
       })
-    } catch (_error) {
-      // Changed 'error' to '_error' to resolve the unused variable error
+    } catch {
       // Account might already exist, continue
       console.log(`Account ${account.code} might already exist`)
     }
   }
 }
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
