@@ -29,7 +29,6 @@ function genId() {
 }
 
 type ActionType = typeof actionTypes
-
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
@@ -87,6 +86,7 @@ export const reducer = (state: State, action: Action): State => {
     case actionTypes.DISMISS_TOAST: {
       // Use actionTypes constant
       const { toastId } = action
+
       // ! Side effects ! - This could be extracted into a dismissToast() action,
       // but I'll keep it here for simplicity
       if (toastId) {
@@ -125,7 +125,6 @@ export const reducer = (state: State, action: Action): State => {
 }
 
 const listeners: Array<(state: State) => void> = []
-
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
@@ -170,14 +169,21 @@ function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
-    listeners.push(setState)
+    // Wrap setState in a function to match the listener's expected type
+    const listener = (newState: State) => {
+      setState(newState)
+    }
+
+    listeners.push(listener)
+
     return () => {
-      const index = listeners.indexOf(setState)
+      // Ensure we remove the exact listener instance we added
+      const index = listeners.indexOf(listener)
       if (index > -1) {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, []) // Empty dependency array to run once on mount and clean up on unmount
 
   return {
     ...state,
