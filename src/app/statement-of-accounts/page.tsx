@@ -20,17 +20,19 @@ interface Account {
   companyId: string
   code: string
   name: string
-  type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE" // This is the strict type
+  type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE"
+  subcategory?: string // New field
   isActive: boolean
-  createdAt: string // Assuming these are strings from the API
+  createdAt: string
   updatedAt: string
 }
 
-// Define an interface for the form state, where 'type' can be a generic string
+// Define an interface for the form state
 interface NewAccountFormState {
   code: string
   name: string
-  type: string // Allow string for form input before validation
+  type: string
+  subcategory: string // New field
 }
 
 const accountTypes = [
@@ -41,11 +43,36 @@ const accountTypes = [
   { value: "EXPENSE", label: "Expense" },
 ]
 
+// Subcategory mapping based on your image
+const subcategoryOptions: Record<string, { value: string; label: string }[]> = {
+  ASSET: [
+    { value: "NON_CURRENT_ASSETS", label: "Non-current assets" },
+    { value: "CURRENT_ASSETS", label: "Current assets" },
+  ],
+  LIABILITY: [
+    { value: "NON_CURRENT_LIABILITIES", label: "Non-current Liabilities" },
+    { value: "CURRENT_LIABILITIES", label: "Current Liabilities" },
+  ],
+  EQUITY: [
+    { value: "SHARE_CAPITAL", label: "Share Capital" },
+    { value: "DRAWINGS", label: "Drawings" },
+    { value: "RETAINED_EARNINGS", label: "Retained earnings" },
+  ],
+  REVENUE: [
+    { value: "REVENUE", label: "Revenue" },
+    { value: "GAINS", label: "Gains" },
+  ],
+  EXPENSE: [
+    { value: "COST_OF_SALES", label: "Cost of sales" },
+    { value: "SELLING_MARKETING", label: "Selling & Marketing expenses" },
+    { value: "ADMIN_DISTRIBUTION", label: "Admin & Distribution expenses" },
+  ],
+}
+
 const StatementOfAccounts = () => {
   const { currentCompany } = useCompany()
   const { user } = useAuth()
   const router = useRouter()
-
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -55,6 +82,7 @@ const StatementOfAccounts = () => {
     code: "",
     name: "",
     type: "",
+    subcategory: "",
   })
 
   const getAuthHeaders = () => {
@@ -67,14 +95,12 @@ const StatementOfAccounts = () => {
 
   const fetchAccounts = async () => {
     if (!currentCompany) return
-
     try {
       const response = await fetch(`/api/accounts?companyId=${currentCompany.id}`, {
         headers: getAuthHeaders(),
       })
-
       if (response.ok) {
-        const data: { accounts: Account[] } = await response.json() // Explicitly type the incoming data
+        const data: { accounts: Account[] } = await response.json()
         setAccounts(data.accounts)
       } else {
         console.error("Failed to fetch accounts, status:", response.status)
@@ -104,7 +130,6 @@ const StatementOfAccounts = () => {
           companyId: currentCompany?.id,
         }),
       })
-
       if (response.ok) {
         setAccounts(accounts.filter((account) => account.id !== accountId))
         alert("Account deleted successfully!")
@@ -130,14 +155,15 @@ const StatementOfAccounts = () => {
     setNewAccount({
       code: account.code,
       name: account.name,
-      type: account.type, // This is already a valid type from the Account object
+      type: account.type,
+      subcategory: account.subcategory || "",
     })
     setShowForm(true)
   }
 
   const saveAccount = async () => {
     if (!newAccount.code || !newAccount.name || !newAccount.type) {
-      alert("Please fill in all fields")
+      alert("Please fill in all required fields")
       return
     }
     if (!currentCompany) {
@@ -161,13 +187,15 @@ const StatementOfAccounts = () => {
             companyId: currentCompany.id,
             code: newAccount.code,
             name: newAccount.name,
-            type: newAccount.type as Account["type"], // Cast after validation
+            type: newAccount.type as Account["type"],
+            subcategory: newAccount.subcategory || null,
           }
         : {
             companyId: currentCompany.id,
             code: newAccount.code,
             name: newAccount.name,
-            type: newAccount.type as Account["type"], // Cast after validation
+            type: newAccount.type as Account["type"],
+            subcategory: newAccount.subcategory || null,
           }
 
       const response = await fetch(url, {
@@ -177,12 +205,18 @@ const StatementOfAccounts = () => {
       })
 
       if (response.ok) {
-        const result: { account: Account } = await response.json() // Explicitly type the incoming data
+        const result: { account: Account } = await response.json()
         if (isEditing) {
           setAccounts(
             accounts.map((acc) =>
               acc.id === editingAccount?.id
-                ? { ...acc, code: newAccount.code, name: newAccount.name, type: newAccount.type as Account["type"] } // Cast here
+                ? {
+                    ...acc,
+                    code: newAccount.code,
+                    name: newAccount.name,
+                    type: newAccount.type as Account["type"],
+                    subcategory: newAccount.subcategory || undefined,
+                  }
                 : acc,
             ),
           )
@@ -191,7 +225,7 @@ const StatementOfAccounts = () => {
           setAccounts([...accounts, result.account])
           alert("Account created successfully!")
         }
-        setNewAccount({ code: "", name: "", type: "" })
+        setNewAccount({ code: "", name: "", type: "", subcategory: "" })
         setEditingAccount(null)
         setShowForm(false)
       } else {
@@ -210,9 +244,14 @@ const StatementOfAccounts = () => {
   }
 
   const cancelForm = () => {
-    setNewAccount({ code: "", name: "", type: "" })
+    setNewAccount({ code: "", name: "", type: "", subcategory: "" })
     setEditingAccount(null)
     setShowForm(false)
+  }
+
+  // Handle type change to reset subcategory
+  const handleTypeChange = (value: string) => {
+    setNewAccount({ ...newAccount, type: value, subcategory: "" })
   }
 
   useEffect(() => {
@@ -274,7 +313,9 @@ const StatementOfAccounts = () => {
           <h1 className="text-4xl font-bold mb-2 text-gray-900">Chart of Accounts</h1>
           <p className="text-gray-600 text-lg">{currentCompany.name} • Manage your account structure</p>
         </div>
+
         <Navigation />
+
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div className="flex gap-4">
@@ -310,6 +351,7 @@ const StatementOfAccounts = () => {
               New Account
             </Button>
           </div>
+
           {showForm && (
             <Card className="border-blue-200 bg-white shadow-sm">
               <CardHeader>
@@ -322,7 +364,7 @@ const StatementOfAccounts = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <Label htmlFor="code" className="text-gray-700 font-medium">
                       Account Code
@@ -351,10 +393,7 @@ const StatementOfAccounts = () => {
                     <Label htmlFor="type" className="text-gray-700 font-medium">
                       Account Type
                     </Label>
-                    <Select
-                      value={newAccount.type}
-                      onValueChange={(value) => setNewAccount({ ...newAccount, type: value })}
-                    >
+                    <Select value={newAccount.type} onValueChange={handleTypeChange}>
                       <SelectTrigger className="bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -364,6 +403,32 @@ const StatementOfAccounts = () => {
                             {type.label}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="subcategory" className="text-gray-700 font-medium">
+                      Subcategory
+                    </Label>
+                    <Select
+                      value={newAccount.subcategory}
+                      onValueChange={(value) => setNewAccount({ ...newAccount, subcategory: value })}
+                      disabled={!newAccount.type}
+                    >
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectValue placeholder="Select subcategory" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-gray-300">
+                        {newAccount.type &&
+                          subcategoryOptions[newAccount.type]?.map((subcategory) => (
+                            <SelectItem
+                              key={subcategory.value}
+                              value={subcategory.value}
+                              className="text-gray-900 hover:bg-gray-100"
+                            >
+                              {subcategory.label}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -385,6 +450,7 @@ const StatementOfAccounts = () => {
               </CardContent>
             </Card>
           )}
+
           {groupedAccounts.map((group) => (
             <Card key={group.value} className="border-blue-200 bg-white shadow-sm">
               <CardHeader>
@@ -406,6 +472,7 @@ const StatementOfAccounts = () => {
                         <TableHead className="text-gray-700 font-semibold">Code</TableHead>
                         <TableHead className="text-gray-700 font-semibold">Account Name</TableHead>
                         <TableHead className="text-gray-700 font-semibold">Type</TableHead>
+                        <TableHead className="text-gray-700 font-semibold">Subcategory</TableHead>
                         <TableHead className="text-gray-700 font-semibold">Status</TableHead>
                         <TableHead className="text-gray-700 font-semibold">Actions</TableHead>
                       </TableRow>
@@ -417,6 +484,16 @@ const StatementOfAccounts = () => {
                           <TableCell className="font-medium text-gray-900">{account.name}</TableCell>
                           <TableCell>
                             <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{account.type}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {account.subcategory ? (
+                              <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+                                {subcategoryOptions[account.type]?.find((sub) => sub.value === account.subcategory)
+                                  ?.label || account.subcategory}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge

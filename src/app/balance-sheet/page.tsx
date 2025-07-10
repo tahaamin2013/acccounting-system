@@ -240,7 +240,7 @@ export default function BalanceSheet() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3 text-gray-900">Long-term Liabilities</h3>
+                  <h3 className="font-semibold mb-3 text-gray-900">non-current Liabilities</h3>
                   <Table>
                     <TableBody>
                       {balanceSheetData.liabilities.longTerm.length > 0 ? (
@@ -252,12 +252,12 @@ export default function BalanceSheet() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell className="text-gray-500 italic">No long-term liabilities found</TableCell>
+                          <TableCell className="text-gray-500 italic">No non-current liabilities   found</TableCell>
                           <TableCell className="text-right text-gray-500">$0</TableCell>
                         </TableRow>
                       )}
                       <TableRow className="border-t font-medium bg-red-50">
-                        <TableCell className="text-red-900">Total Long-term Liabilities</TableCell>
+                        <TableCell className="text-red-900">Total non-current Liabilities</TableCell>
                         <TableCell className="text-right text-red-900">
                           ${longTermLiabilities.toLocaleString()}
                         </TableCell>

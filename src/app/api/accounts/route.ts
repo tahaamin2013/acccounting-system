@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma" // Assuming you have this file
-import { verifyToken } from "@/lib/auth" // Your existing auth.ts
+import { prisma } from "@/lib/prisma"
+import { verifyToken } from "@/lib/auth"
 
 /**
  * Handles GET requests to fetch accounts for a specific company.
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
 
   const token = authHeader.split(" ")[1]
-  const payload = verifyToken(token) // Using your verifyToken function
+  const payload = verifyToken(token)
   if (!payload || !payload.userId) {
     return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 })
   }
@@ -42,9 +42,6 @@ export async function GET(req: NextRequest) {
     const accounts = await prisma.account.findMany({
       where: {
         companyId: companyId,
-        // The client code in StatementOfAccounts.tsx filters for isActive: true
-        // If you want the API to return all accounts regardless of status, remove this line.
-        // For now, matching client's expected behavior.
         isActive: true,
       },
       orderBy: [{ type: "asc" }, { code: "asc" }],
@@ -72,13 +69,13 @@ export async function POST(req: NextRequest) {
   }
 
   const token = authHeader.split(" ")[1]
-  const payload = verifyToken(token) // Using your verifyToken function
+  const payload = verifyToken(token)
   if (!payload || !payload.userId) {
     return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 })
   }
 
   try {
-    const { companyId, code, name, type } = await req.json()
+    const { companyId, code, name, type, subcategory } = await req.json()
 
     // Validate required fields
     if (!companyId || !code || !name || !type) {
@@ -115,7 +112,6 @@ export async function POST(req: NextRequest) {
     const existingAccount = await prisma.account.findUnique({
       where: {
         companyId_code: {
-          // This is the unique constraint defined in your schema
           companyId: companyId,
           code: code,
         },
@@ -136,7 +132,8 @@ export async function POST(req: NextRequest) {
         code: code,
         name: name,
         type: type,
-        isActive: true, // Default to active
+        subcategory: subcategory || null, // New field
+        isActive: true,
       },
     })
 
@@ -150,6 +147,7 @@ export async function POST(req: NextRequest) {
         { status: 409 },
       )
     }
+
     let errorMessage = "Internal Server Error: Failed to create account"
     if (error instanceof Error) {
       errorMessage = error.message
