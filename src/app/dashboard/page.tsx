@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR from "swr" // Import useSWR
 import { useAuth } from "@/contexts/auth-context"
 import { useCompany } from "@/contexts/company-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,15 +17,6 @@ export default function Dashboard() {
   const { user, logout } = useAuth()
   const { currentCompany, companies } = useCompany()
   const router = useRouter()
-  const [stats, setStats] = useState({
-    totalAssets: 0,
-    netIncome: 0,
-    journalEntries: 0,
-    activeAccounts: 0,
-    isBalanced: true,
-  })
-  const [recentActivity, setRecentActivity] = useState([])
-  const [loading, setLoading] = useState(true)
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token")
@@ -34,65 +26,85 @@ export default function Dashboard() {
     }
   }
 
-  const fetchDashboardData = async () => {
-    if (!currentCompany) {
-      setLoading(false)
-      return
+  // Define a fetcher function for SWR
+  const fetcher = async (url: string) => {
+    const headers = getAuthHeaders()
+    const response = await fetch(url, { headers })
+    if (!response.ok) {
+      throw new Error("Failed to fetch data")
     }
-
-    try {
-      const [journalResponse, accountsResponse] = await Promise.all([
-        fetch(`/api/journal?companyId=${currentCompany.id}`, { headers: getAuthHeaders() }),
-        fetch(`/api/accounts?companyId=${currentCompany.id}`, { headers: getAuthHeaders() }),
-      ])
-
-      if (journalResponse.ok && accountsResponse.ok) {
-        const journalData = await journalResponse.json()
-        const accountsData = await accountsResponse.json()
-
-        // Calculate statistics
-        const trialBalance = calculateTrialBalance(journalData.journalEntries)
-        const profitLoss = calculateProfitLoss(journalData.journalEntries, accountsData.accounts)
-        const balanceSheet = calculateBalanceSheet(journalData.journalEntries, accountsData.accounts)
-
-        const totalDebits = trialBalance.reduce((sum, item) => sum + item.debit, 0)
-        const totalCredits = trialBalance.reduce((sum, item) => sum + item.credit, 0)
-        const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01
-
-        const totalAssets =
-          balanceSheet.assets.current.reduce((sum, item) => sum + item.amount, 0) +
-          balanceSheet.assets.nonCurrent.reduce((sum, item) => sum + item.amount, 0)
-
-        setStats({
-          totalAssets,
-          netIncome: profitLoss.netIncome,
-          journalEntries: journalData.journalEntries.length,
-          activeAccounts: accountsData.accounts.filter((a) => a.isActive).length,
-          isBalanced,
-        })
-
-        // Set recent activity from journal entries
-        const recentEntries = journalData.journalEntries
-          .slice(-3)
-          .reverse()
-          .map((entry) => ({
-            title: `Journal entry: ${entry.reference}`,
-            description: entry.description,
-            time: new Date(entry.date).toLocaleDateString(),
-          }))
-
-        setRecentActivity(recentEntries)
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error)
-    } finally {
-      setLoading(false)
-    }
+    return response.json()
   }
 
+  // Use SWR for data fetching
+  const {
+    data: journalData,
+    error: journalError,
+    isLoading: isLoadingJournal,
+  } = useSWR(currentCompany ? `/api/journal?companyId=${currentCompany.id}` : null, fetcher)
+  const {
+    data: accountsData,
+    error: accountsError,
+    isLoading: isLoadingAccounts,
+  } = useSWR(currentCompany ? `/api/accounts?companyId=${currentCompany.id}` : null, fetcher)
+
+  const loading = isLoadingJournal || isLoadingAccounts
+  const hasError = journalError || accountsError
+
+  const [stats, setStats] = useState({
+    totalAssets: 0,
+    netIncome: 0,
+    journalEntries: 0,
+    activeAccounts: 0,
+    isBalanced: true,
+  })
+  const [recentActivity, setRecentActivity] = useState<{ title: string; description: string; time: string }[]>([])
+
   useEffect(() => {
-    fetchDashboardData()
-  }, [currentCompany])
+    if (journalData && accountsData) {
+      // Calculate statistics
+      const trialBalance = calculateTrialBalance(journalData.journalEntries)
+      const profitLoss = calculateProfitLoss(journalData.journalEntries, accountsData.accounts)
+      const balanceSheet = calculateBalanceSheet(journalData.journalEntries, accountsData.accounts)
+
+      const totalDebits = trialBalance.reduce((sum, item) => sum + item.debit, 0)
+      const totalCredits = trialBalance.reduce((sum, item) => sum + item.credit, 0)
+      const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01
+
+      const totalAssets =
+        balanceSheet.assets.current.reduce((sum, item) => sum + item.amount, 0) +
+        balanceSheet.assets.nonCurrent.reduce((sum, item) => sum + item.amount, 0)
+
+      setStats({
+        totalAssets,
+        netIncome: profitLoss.netIncome,
+        journalEntries: journalData.journalEntries.length,
+        activeAccounts: accountsData.accounts.filter((a: { isActive: boolean }) => a.isActive).length,
+        isBalanced,
+      })
+
+      // Set recent activity from journal entries
+      const recentEntries = journalData.journalEntries
+        .slice(-3)
+        .reverse()
+        .map((entry: { reference: string; description: string; date: string | number | Date }) => ({
+          title: `Journal entry: ${entry.reference}`,
+          description: entry.description,
+          time: new Date(entry.date).toLocaleDateString(),
+        }))
+      setRecentActivity(recentEntries)
+    } else if (!currentCompany) {
+      // Reset stats and activity if no company is selected
+      setStats({
+        totalAssets: 0,
+        netIncome: 0,
+        journalEntries: 0,
+        activeAccounts: 0,
+        isBalanced: true,
+      })
+      setRecentActivity([])
+    }
+  }, [journalData, accountsData, currentCompany])
 
   const handleLogout = () => {
     logout()
@@ -151,14 +163,11 @@ export default function Dashboard() {
             Logout
           </Button>
         </div>
-
         {/* Company Selector */}
         <CompanySelector />
-
         {currentCompany ? (
           <>
             <Navigation />
-
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="border-blue-200 bg-white shadow-sm">
@@ -175,7 +184,6 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-
               <Card className="border-blue-200 bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -196,7 +204,6 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-
               <Card className="border-blue-200 bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -211,7 +218,6 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-
               <Card className="border-blue-200 bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -229,7 +235,6 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {quickActions.map((action, index) => {
@@ -247,7 +252,6 @@ export default function Dashboard() {
                 )
               })}
             </div>
-
             {/* Main Content */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="border-blue-200 bg-white shadow-sm">
@@ -267,6 +271,10 @@ export default function Dashboard() {
                           <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                         </div>
                       ))}
+                    </div>
+                  ) : hasError ? (
+                    <div className="text-center py-8 text-red-500">
+                      <p>Error loading recent activity. Please try again.</p>
                     </div>
                   ) : recentActivity.length > 0 ? (
                     recentActivity.map((activity, index) => (
@@ -291,7 +299,6 @@ export default function Dashboard() {
                   )}
                 </CardContent>
               </Card>
-
               <Card className="border-blue-200 bg-white shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-gray-900">
