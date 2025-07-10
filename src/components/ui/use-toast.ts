@@ -28,22 +28,21 @@ function genId() {
   return count.toString()
 }
 
-// Removed `type ActionType = typeof actionTypes;`
 type Action =
   | {
-      type: typeof actionTypes.ADD_TOAST // Directly reference the type of the property
+      type: typeof actionTypes.ADD_TOAST
       toast: ToasterToast
     }
   | {
-      type: typeof actionTypes.UPDATE_TOAST // Directly reference the type of the property
+      type: typeof actionTypes.UPDATE_TOAST
       toast: Partial<ToasterToast>
     }
   | {
-      type: typeof actionTypes.DISMISS_TOAST // Directly reference the type of the property
+      type: typeof actionTypes.DISMISS_TOAST
       toastId?: ToasterToast["id"]
     }
   | {
-      type: typeof actionTypes.REMOVE_TOAST // Directly reference the type of the property
+      type: typeof actionTypes.REMOVE_TOAST
       toastId?: ToasterToast["id"]
     }
 
@@ -120,11 +119,13 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
+
     default:
       // If we reach here, TypeScript has narrowed 'action' to 'never'
       // because all known 'Action' types should have been handled.
       // This indicates an unhandled action type.
-      throw new Error(`Unknown action: ${(action as any).type}`)
+      // To avoid the 'no-explicit-any' error, we can stringify the action object.
+      throw new Error(`Unknown action: ${JSON.stringify(action)}`)
   }
 }
 
