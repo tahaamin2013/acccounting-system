@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Navigation } from "@/components/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Scale, TrendingUp, AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Scale, TrendingUp, AlertCircle, Download } from "lucide-react"
 import { useCompany } from "@/contexts/company-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
-import { calculateTrialBalance, type TrialBalanceItem } from "@/lib/journal-utils"
+import type { TrialBalanceItem } from "@/lib/journal-utils"
 
 export default function TrialBalance() {
   const { currentCompany } = useCompany()
@@ -26,6 +27,58 @@ export default function TrialBalance() {
     }
   }
 
+  const processTrialBalanceData = (journalEntries: any[]) => {
+    const accountBalances = new Map<string, { account: string; balance: number; type: string }>()
+
+    // Process all journal entries to calculate net balances
+    journalEntries.forEach((entry) => {
+      entry.lines.forEach((line: any) => {
+        const existing = accountBalances.get(line.accountName) || {
+          account: line.accountName,
+          balance: 0,
+          type: line.accountType || "ASSET", // You may need to get this from your accounts data
+        }
+
+        const debit = Number(line.debit) || 0
+        const credit = Number(line.credit) || 0
+
+        // Calculate net balance based on account type
+        if (["ASSET", "EXPENSE"].includes(existing.type)) {
+          existing.balance += debit - credit
+        } else {
+          existing.balance += credit - debit
+        }
+
+        accountBalances.set(line.accountName, existing)
+      })
+    })
+
+    // Convert to trial balance format
+    const trialBalanceData: TrialBalanceItem[] = []
+    accountBalances.forEach((account) => {
+      if (Math.abs(account.balance) > 0.01) {
+        // Only include accounts with non-zero balances
+        if (["ASSET", "EXPENSE"].includes(account.type)) {
+          // For Assets and Expenses, positive balance goes to Debit
+          trialBalanceData.push({
+            account: account.account,
+            debit: account.balance > 0 ? account.balance : 0,
+            credit: account.balance < 0 ? Math.abs(account.balance) : 0,
+          })
+        } else {
+          // For Liabilities, Equity, Revenue, positive balance goes to Credit
+          trialBalanceData.push({
+            account: account.account,
+            debit: account.balance < 0 ? Math.abs(account.balance) : 0,
+            credit: account.balance > 0 ? account.balance : 0,
+          })
+        }
+      }
+    })
+
+    return trialBalanceData
+  }
+
   const fetchData = async () => {
     if (!currentCompany) return
 
@@ -36,7 +89,7 @@ export default function TrialBalance() {
 
       if (response.ok) {
         const data = await response.json()
-        const trialBalance = calculateTrialBalance(data.journalEntries)
+        const trialBalance = processTrialBalanceData(data.journalEntries)
         setTrialBalanceData(trialBalance)
       }
     } catch (error) {
@@ -46,15 +99,72 @@ export default function TrialBalance() {
     }
   }
 
+  const exportTrialBalanceToCSV = () => {
+    if (!currentCompany) return
+
+    const currentDate = new Date().toLocaleDateString()
+    const totalDebits = trialBalanceData.reduce((sum, item) => sum + item.debit, 0)
+    const totalCredits = trialBalanceData.reduce((sum, item) => sum + item.credit, 0)
+    const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01
+
+    const csvContent = [
+      // Header information
+      [`Trial Balance - ${currentCompany.name}`],
+      [`As of ${currentDate}`],
+      [`Status: ${isBalanced ? "Balanced" : "Unbalanced"}`],
+      [`Total Debits: $${totalDebits.toLocaleString()}`],
+      [`Total Credits: $${totalCredits.toLocaleString()}`],
+      [], // Empty row
+
+      // Column headers
+      ["Account Name", "Debit", "Credit"],
+
+      // Account data
+      ...trialBalanceData.map((item) => [
+        item.account,
+        item.debit > 0 ? item.debit.toString() : "",
+        item.credit > 0 ? item.credit.toString() : "",
+      ]),
+
+      // Totals row
+      ["TOTALS", totalDebits.toString(), totalCredits.toString()],
+
+      // Additional info if unbalanced
+      ...(isBalanced
+        ? []
+        : [
+            [], // Empty row
+            [`Difference: $${Math.abs(totalDebits - totalCredits).toLocaleString()}`],
+          ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute(
+      "download",
+      `Trial_Balance_${currentCompany.name.replace(/\s+/g, "_")}_${currentDate.replace(/\//g, "-")}.csv`,
+    )
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   useEffect(() => {
     if (!user) {
       router.push("/")
       return
     }
+
     if (!currentCompany) {
       router.push("/dashboard")
       return
     }
+
     fetchData()
   }, [currentCompany, user, router])
 
@@ -162,13 +272,27 @@ export default function TrialBalance() {
 
           <Card className="border-blue-200 bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="text-gray-900 flex items-center gap-3">
-                <Scale className="h-5 w-5 text-blue-600" />
-                Trial Balance as of {new Date().toLocaleDateString()}
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                List of all accounts with their debit and credit balances
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-gray-900 flex items-center gap-3">
+                    <Scale className="h-5 w-5 text-blue-600" />
+                    Trial Balance as of {new Date().toLocaleDateString()}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    List of all accounts with their debit and credit balances
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={exportTrialBalanceToCSV}
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+                  disabled={trialBalanceData.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {trialBalanceData.length === 0 ? (
