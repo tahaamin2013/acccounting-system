@@ -65,7 +65,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full bg-white max-w-md">
       <CardHeader>
         <CardTitle>Create Account</CardTitle>
         <CardDescription>Start managing your business finances today</CardDescription>
