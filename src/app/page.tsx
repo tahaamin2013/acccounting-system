@@ -143,7 +143,7 @@ export default function LandingPage() {
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Features
-            </Link>
+            </Link> 
             <Link
               href="#testimonials"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -207,7 +207,7 @@ export default function LandingPage() {
             exit={{ opacity: 0, y: -20 }}
             className="md:hidden absolute top-16 inset-x-0 bg-white/95 backdrop-blur-lg border-b"
           >
-            <div className="container py-4 flex flex-col gap-4">
+            <div className="container py-4 flex flex-col gap-4 text-black">
               <Link href="#features" className="py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Features
               </Link>
