@@ -38,11 +38,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden: User does not have access to this company" }, { status: 403 })
     }
 
-    // Fetch accounts from the database using Prisma
+    // Fetch accounts from the database using Prisma with parent/children relationships
     const accounts = await prisma.account.findMany({
       where: {
         companyId: companyId,
         isActive: true,
+      },
+      include: {
+        parent: true,
+        children: true,
       },
       orderBy: [{ type: "asc" }, { code: "asc" }],
     })
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { companyId, code, name, type, subcategory } = await req.json()
+    const { companyId, code, name, type, subcategory, parentId } = await req.json()
 
     // Validate required fields
     if (!companyId || !code || !name || !type) {
@@ -108,6 +112,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden: Insufficient permissions to create accounts" }, { status: 403 })
     }
 
+    // If parentId is provided, validate that the parent account exists and has the same type
+    if (parentId) {
+      const parentAccount = await prisma.account.findUnique({
+        where: { id: parentId },
+      })
+
+      if (!parentAccount) {
+        return NextResponse.json({ error: "Bad Request: Parent account not found" }, { status: 400 })
+      }
+
+      if (parentAccount.type !== type) {
+        return NextResponse.json(
+          { error: "Bad Request: Sub-account must have the same type as parent account" },
+          { status: 400 },
+        )
+      }
+
+      if (parentAccount.companyId !== companyId) {
+        return NextResponse.json(
+          { error: "Bad Request: Parent account must belong to the same company" },
+          { status: 400 },
+        )
+      }
+    }
+
     // Check if an account with the same code already exists for this company
     const existingAccount = await prisma.account.findUnique({
       where: {
@@ -132,8 +161,13 @@ export async function POST(req: NextRequest) {
         code: code,
         name: name,
         type: type,
-        subcategory: subcategory || null, // New field
+        subcategory: subcategory || null,
+        parentId: parentId || null,
         isActive: true,
+      },
+      include: {
+        parent: true,
+        children: true,
       },
     })
 

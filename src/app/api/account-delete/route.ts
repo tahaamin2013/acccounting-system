@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7)
     let decoded: DecodedToken
-
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as DecodedToken
     } catch {
@@ -60,17 +59,29 @@ export async function POST(request: NextRequest) {
         id: accountId,
         companyId: companyId,
       },
-    }) 
-    
+      include: {
+        children: true,
+      },
+    })
 
     if (!account) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 })
     }
 
+    // Check if the account has sub-accounts
+    if (account.children.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete account "${account.name}" because it has ${account.children.length} sub-accounts. Please delete or reassign the sub-accounts first.`,
+        },
+        { status: 400 },
+      )
+    }
+
     // Check if the account is being used in any journal entries
     const journalLinesCount = await prisma.journalLine.count({
       where: {
-        accountName: account.name,
+        OR: [{ accountName: account.name }, { accountId: accountId }],
         journalEntry: {
           companyId: companyId,
         },
