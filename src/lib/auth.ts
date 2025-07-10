@@ -10,6 +10,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 export type { User, Company, UserCompany, Role }
 export type CompanyWithRole = Company & { role: Role }
 
+// Define a type for the subset of User fields returned by findUserById
+export type PublicUser = Pick<User, "id" | "email" | "firstName" | "lastName" | "createdAt">
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
 }
@@ -120,7 +123,7 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   })
 }
 
-export async function findUserById(id: string): Promise<User | null> {
+export async function findUserById(id: string): Promise<PublicUser | null> {
   return await prisma.user.findUnique({
     where: { id },
     select: {
