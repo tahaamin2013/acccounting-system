@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
         id: accountId,
         companyId: companyId,
       },
-    })
+    }) 
+    
 
     if (!account) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 })
