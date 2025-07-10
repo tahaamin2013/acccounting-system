@@ -29,6 +29,7 @@ function genId() {
 }
 
 type ActionType = typeof actionTypes
+
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
@@ -109,7 +110,6 @@ export const reducer = (state: State, action: Action): State => {
         ),
       }
     }
-
     case actionTypes.REMOVE_TOAST: // Use actionTypes constant
       if (action.toastId === undefined) {
         return {
@@ -125,6 +125,7 @@ export const reducer = (state: State, action: Action): State => {
 }
 
 const listeners: Array<(state: State) => void> = []
+
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
