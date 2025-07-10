@@ -1,4 +1,5 @@
 "use client"
+
 import type * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
@@ -47,8 +48,9 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconArrowLeft: () => <ChevronLeft className="size-4" />,
-        IconArrowRight: () => <ChevronRight className="size-4" />,
+        // @ts-expect-error
+        IconLeft: () => <ChevronLeft className="size-4" />,
+        IconRight: () => <ChevronRight className="size-4" />,
       }}
       {...rest} // Spreading the rest of the props here
     />
