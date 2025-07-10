@@ -49,7 +49,6 @@ export interface BalanceSheetData {
 
 export function calculateTrialBalance(journalEntries: JournalEntry[]): TrialBalanceItem[] {
   const accountBalances = new Map<string, { debit: number; credit: number }>()
-
   journalEntries.forEach((entry) => {
     entry.lines.forEach((line) => {
       const existing = accountBalances.get(line.accountName) || { debit: 0, credit: 0 }
@@ -59,7 +58,6 @@ export function calculateTrialBalance(journalEntries: JournalEntry[]): TrialBala
       })
     })
   })
-
   return Array.from(accountBalances.entries()).map(([account, balances]) => ({
     account,
     debit: balances.debit,
@@ -69,12 +67,10 @@ export function calculateTrialBalance(journalEntries: JournalEntry[]): TrialBala
 
 export function calculateProfitLoss(journalEntries: JournalEntry[], accounts: Account[]): ProfitLossData {
   const accountBalances = new Map<string, number>()
-
   journalEntries.forEach((entry) => {
     entry.lines.forEach((line) => {
       const account = accounts.find((a) => a.name === line.accountName)
       if (!account) return
-
       const existing = accountBalances.get(line.accountName) || 0
       if (account.type === "REVENUE") {
         accountBalances.set(line.accountName, existing + Number(line.credit) - Number(line.debit))
@@ -114,17 +110,25 @@ export function calculateBalanceSheet(journalEntries: JournalEntry[], accounts: 
       if (!account) return
 
       const existing = accountBalances.get(line.accountName) || 0
+
       if (account.type === "ASSET" || account.type === "EXPENSE") {
         accountBalances.set(line.accountName, existing + Number(line.debit) - Number(line.credit))
       } else {
+        // LIABILITY, EQUITY, REVENUE
         accountBalances.set(line.accountName, existing + Number(line.credit) - Number(line.debit))
       }
     })
   })
 
-  const assets = { current: [], nonCurrent: [] }
-  const liabilities = { current: [], longTerm: [] }
-  const equity = []
+  const assets: { current: { name: string; amount: number }[]; nonCurrent: { name: string; amount: number }[] } = {
+    current: [],
+    nonCurrent: [],
+  }
+  const liabilities: { current: { name: string; amount: number }[]; longTerm: { name: string; amount: number }[] } = {
+    current: [],
+    longTerm: [],
+  }
+  const equity: { name: string; amount: number }[] = [] // Explicitly type the equity array
 
   accounts.forEach((account) => {
     const balance = accountBalances.get(account.name) || 0

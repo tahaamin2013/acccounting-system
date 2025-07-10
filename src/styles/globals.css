@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
+@import "tailwindcss/preflight";
 @tailwind utilities;
+@tailwind utilities; /* Keep this as it was already present */
 
 body {
   font-family: Arial, Helvetica, sans-serif;
