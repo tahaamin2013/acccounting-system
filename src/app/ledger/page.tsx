@@ -6,6 +6,8 @@ import { Navigation } from "@/components/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Download } from "lucide-react"
 import { useCompany } from "@/contexts/company-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
@@ -111,14 +113,16 @@ export default function Ledger() {
       entry.lines.forEach((line) => {
         const ledger = ledgerMap.get(line.accountName)
         if (ledger) {
-          const debit = Number(line.debit)
-          const credit = Number(line.credit)
+          const debit = Number(line.debit) || 0
+          const credit = Number(line.credit) || 0
 
           // Calculate running balance based on account type
           let balanceChange = 0
           if (["ASSET", "EXPENSE"].includes(ledger.account.type)) {
+            // For Assets and Expenses: Debits increase, Credits decrease
             balanceChange = debit - credit
           } else {
+            // For Liabilities, Equity, Revenue: Credits increase, Debits decrease
             balanceChange = credit - debit
           }
 
@@ -136,12 +140,57 @@ export default function Ledger() {
       })
     })
 
-    // Sort entries by date
+    // Sort entries by date and recalculate running balances
     ledgerMap.forEach((ledger) => {
       ledger.entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+      // Recalculate running balances in chronological order
+      let runningBalance = 0
+      ledger.entries.forEach((entry) => {
+        if (["ASSET", "EXPENSE"].includes(ledger.account.type)) {
+          runningBalance += entry.debit - entry.credit
+        } else {
+          runningBalance += entry.credit - entry.debit
+        }
+        entry.balance = runningBalance
+      })
+
+      ledger.balance = runningBalance
     })
 
     return Array.from(ledgerMap.values()).filter((ledger) => ledger.entries.length > 0)
+  }
+
+  const exportLedgerToCSV = (ledger: AccountLedger) => {
+    const headers = ["Date", "Reference", "Description", "Debit", "Credit", "Balance"]
+    const csvContent = [
+      // Add account header
+      [`Account: ${ledger.account.code} - ${ledger.account.name}`],
+      [`Account Type: ${ledger.account.type}`],
+      [`Final Balance: $${ledger.balance.toLocaleString()}`],
+      [], // Empty row
+      headers,
+      ...ledger.entries.map((entry) => [
+        new Date(entry.date).toLocaleDateString(),
+        entry.reference,
+        entry.description,
+        entry.debit > 0 ? entry.debit.toString() : "",
+        entry.credit > 0 ? entry.credit.toString() : "",
+        entry.balance.toString(),
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `${ledger.account.code}_${ledger.account.name.replace(/\s+/g, "_")}_ledger.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   useEffect(() => {
@@ -180,7 +229,18 @@ export default function Ledger() {
                 <span>
                   {ledger.account.code} - {ledger.account.name}
                 </span>
-                <Badge className="bg-blue-500 text-white">Balance: ${ledger.balance.toLocaleString()}</Badge>
+                <div className="flex items-center gap-3">
+                  <Badge className="bg-blue-500 text-white">Balance: ${ledger.balance.toLocaleString()}</Badge>
+                  <Button
+                    onClick={() => exportLedgerToCSV(ledger)}
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-600 text-black hover:bg-gray-800"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
               </CardTitle>
               <CardDescription className="text-gray-400">Account ledger entries</CardDescription>
             </CardHeader>
