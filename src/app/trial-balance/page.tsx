@@ -10,7 +10,7 @@ import { Scale, TrendingUp, AlertCircle, Download } from "lucide-react"
 import { useCompany } from "@/contexts/company-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
-import type { TrialBalanceItem } from "@/lib/journal-utils"
+import type { TrialBalanceItem, JournalEntry, AccountBalance } from "@/lib/types"
 
 export default function TrialBalance() {
   const { currentCompany } = useCompany()
@@ -27,16 +27,16 @@ export default function TrialBalance() {
     }
   }
 
-  const processTrialBalanceData = (journalEntries: any[]) => {
-    const accountBalances = new Map<string, { account: string; balance: number; type: string }>()
+  const processTrialBalanceData = (journalEntries: JournalEntry[]) => {
+    const accountBalances = new Map<string, AccountBalance>()
 
     // Process all journal entries to calculate net balances
     journalEntries.forEach((entry) => {
-      entry.lines.forEach((line: any) => {
+      entry.lines.forEach((line) => {
         const existing = accountBalances.get(line.accountName) || {
           account: line.accountName,
           balance: 0,
-          type: line.accountType || "ASSET", // You may need to get this from your accounts data
+          type: line.accountType || "ASSET", // Default to ASSET if type is missing
         }
 
         const debit = Number(line.debit) || 0
@@ -115,20 +115,16 @@ export default function TrialBalance() {
       [`Total Debits: $${totalDebits.toLocaleString()}`],
       [`Total Credits: $${totalCredits.toLocaleString()}`],
       [], // Empty row
-
       // Column headers
       ["Account Name", "Debit", "Credit"],
-
       // Account data
       ...trialBalanceData.map((item) => [
         item.account,
         item.debit > 0 ? item.debit.toString() : "",
         item.credit > 0 ? item.credit.toString() : "",
       ]),
-
       // Totals row
       ["TOTALS", totalDebits.toString(), totalCredits.toString()],
-
       // Additional info if unbalanced
       ...(isBalanced
         ? []
@@ -159,12 +155,10 @@ export default function TrialBalance() {
       router.push("/")
       return
     }
-
     if (!currentCompany) {
       router.push("/dashboard")
       return
     }
-
     fetchData()
   }, [currentCompany, user, router])
 
