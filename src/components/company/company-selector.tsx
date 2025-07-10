@@ -35,7 +35,7 @@ export function CompanySelector() {
             Welcome to AccounTech
           </CardTitle>
           <CardDescription>
-            To get started, you'll need to create your first company. This will be your main accounting entity.
+            To get started, youll need to create your first company. This will be your main accounting entity.
           </CardDescription>
         </CardHeader>
         <CardContent>

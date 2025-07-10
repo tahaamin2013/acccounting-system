@@ -1,3 +1,6 @@
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { prisma } from "./prisma"
@@ -6,7 +9,6 @@ import type { User, Company, UserCompany, Role } from "@prisma/client"
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 
 export type { User, Company, UserCompany, Role }
-
 export type CompanyWithRole = Company & { role: Role }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -36,7 +38,6 @@ export async function createUser(userData: {
   lastName: string
 }): Promise<User> {
   const hashedPassword = await hashPassword(userData.password)
-
   return await prisma.user.create({
     data: {
       email: userData.email,
@@ -84,7 +85,6 @@ export async function getUserCompanies(userId: string): Promise<CompanyWithRole[
       },
     },
   })
-
   return userCompanies.map((uc) => ({
     ...uc.company,
     role: uc.role,
@@ -207,16 +207,13 @@ export async function deleteJournalEntry(entryId: string, userId: string, compan
       companyId,
     },
   })
-
   if (!entry) {
     throw new Error("Journal entry not found")
   }
-
   const userAccess = await checkUserCompanyAccess(userId, companyId)
   if (!userAccess || (userAccess.role !== "OWNER" && userAccess.role !== "ADMIN" && userAccess.role !== "ACCOUNTANT")) {
     throw new Error("Insufficient permissions")
   }
-
   return await prisma.journalEntry.delete({
     where: { id: entryId },
   })
@@ -253,20 +250,16 @@ export async function initializeDefaultAccounts(companyId: string) {
     { code: "1200", name: "Inventory", type: "ASSET" as const },
     { code: "1500", name: "Equipment", type: "ASSET" as const },
     { code: "1600", name: "Accumulated Depreciation - Equipment", type: "ASSET" as const },
-
     // Liabilities
     { code: "2000", name: "Accounts Payable", type: "LIABILITY" as const },
     { code: "2100", name: "Accrued Expenses", type: "LIABILITY" as const },
     { code: "2500", name: "Long-term Debt", type: "LIABILITY" as const },
-
     // Equity
     { code: "3000", name: "Owner's Equity", type: "EQUITY" as const },
     { code: "3100", name: "Retained Earnings", type: "EQUITY" as const },
-
     // Revenue
     { code: "4000", name: "Sales Revenue", type: "REVENUE" as const },
     { code: "4100", name: "Service Revenue", type: "REVENUE" as const },
-
     // Expenses
     { code: "5000", name: "Cost of Goods Sold", type: "EXPENSE" as const },
     { code: "6000", name: "Salaries Expense", type: "EXPENSE" as const },
@@ -276,16 +269,19 @@ export async function initializeDefaultAccounts(companyId: string) {
     { code: "6400", name: "Insurance Expense", type: "EXPENSE" as const },
     { code: "6500", name: "Depreciation Expense", type: "EXPENSE" as const },
   ]
-
   for (const account of defaultAccounts) {
     try {
       await createAccount({
         companyId,
         ...account,
       })
-    } catch (error) {
+    } catch (_error) {
+      // Changed 'error' to '_error' to resolve the unused variable error
       // Account might already exist, continue
       console.log(`Account ${account.code} might already exist`)
     }
   }
+}
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }

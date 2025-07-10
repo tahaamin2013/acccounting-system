@@ -7,8 +7,6 @@ const prisma = new PrismaClient()
 // Define an interface for the JWT payload
 interface JwtPayload {
   userId: string
-  // Add other properties if your JWT payload contains them
-  [key: string]: any // Allow for other properties if they exist
 }
 
 export async function POST(request: NextRequest) {
@@ -21,6 +19,7 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7)
     let decoded: JwtPayload // Specify the type for decoded
+
     try {
       const verified = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key")
       // Ensure verified is an object and has userId
