@@ -305,7 +305,7 @@ export default function Journal() {
     <div className="min-h-screen bg-white">
       <div className="container mx-auto p-6 space-y-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2 text-white">Journal Entries</h1>
+          <h1 className="text-4xl font-bold mb-2 text-black">Journal Entries</h1>
           <p className="text-gray-400 text-lg">{currentCompany.name} • Record and manage transactions</p>
         </div>
 

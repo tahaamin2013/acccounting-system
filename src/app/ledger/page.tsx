@@ -261,7 +261,7 @@ export default function Ledger() {
     <div className="min-h-screen bg-white">
       <div className="container mx-auto p-6 space-y-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2 text-white">General Ledger</h1>
+          <h1 className="text-4xl font-bold mb-2 text-black">General Ledger</h1>
           <p className="text-gray-400 text-lg">{currentCompany.name} • View account balances and transaction history</p>
         </div>
 

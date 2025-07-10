@@ -81,22 +81,22 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required />
+              <Input className="border border-black" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required />
+              <Input className="border border-black" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
+            <Input className="border border-black" id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
+            <Input className="border border-black"
               id="password"
               name="password"
               type="password"
@@ -108,7 +108,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
+            <Input className="border border-black"
               id="confirmPassword"
               name="confirmPassword"
               type="password"
@@ -123,8 +123,8 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
             Create Account
           </Button>
 
-          <div className="text-center">
-            <Button variant="link" onClick={onToggleMode}>
+          <div className="text-center text-black">
+            <Button variant="link" className="text-black" onClick={onToggleMode}>
               Already have an account? Sign in
             </Button>
           </div>

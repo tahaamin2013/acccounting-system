@@ -61,7 +61,7 @@ export function CompanySelector() {
             Company
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowCreateForm(true)}>
+            <Button className="text-black" variant="outline" size="sm" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-1" />
               New
             </Button>
@@ -81,8 +81,8 @@ export function CompanySelector() {
                 setCurrentCompany(company || null)
               }}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a company" />
+              <SelectTrigger className="text-black">
+                <SelectValue className="text-black" placeholder="Select a company" />
               </SelectTrigger>
               <SelectContent>
                 {companies.map((company) => (

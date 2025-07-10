@@ -83,6 +83,7 @@ export function CreateCompanyForm({ onSuccess, onCancel }: CreateCompanyFormProp
         <div className="space-y-2">
           <Label htmlFor="name">Company Name *</Label>
           <Input
+          className="text-black"
             id="name"
             value={formData.name}
             onChange={(e) => handleChange("name", e.target.value)}
@@ -94,12 +95,12 @@ export function CreateCompanyForm({ onSuccess, onCancel }: CreateCompanyFormProp
         <div className="space-y-2">
           <Label htmlFor="industry">Industry</Label>
           <Select value={formData.industry} onValueChange={(value) => handleChange("industry", value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select industry" />
+            <SelectTrigger className="text-black">
+              <SelectValue className="text-black"  placeholder="Select industry" />
             </SelectTrigger>
             <SelectContent>
               {industries.map((industry) => (
-                <SelectItem key={industry} value={industry}>
+                <SelectItem  key={industry} value={industry}>
                   {industry}
                 </SelectItem>
               ))}
@@ -112,6 +113,7 @@ export function CreateCompanyForm({ onSuccess, onCancel }: CreateCompanyFormProp
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
+          className="text-black"
           value={formData.description}
           onChange={(e) => handleChange("description", e.target.value)}
           placeholder="Brief description of your company"
@@ -123,6 +125,7 @@ export function CreateCompanyForm({ onSuccess, onCancel }: CreateCompanyFormProp
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
+          className="text-black"
             id="email"
             type="email"
             value={formData.email}
@@ -134,6 +137,7 @@ export function CreateCompanyForm({ onSuccess, onCancel }: CreateCompanyFormProp
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
           <Input
+          className="text-black"
             id="phone"
             value={formData.phone}
             onChange={(e) => handleChange("phone", e.target.value)}
@@ -156,6 +160,7 @@ export function CreateCompanyForm({ onSuccess, onCancel }: CreateCompanyFormProp
       <div className="space-y-2">
         <Label htmlFor="taxId">Tax ID / EIN</Label>
         <Input
+        className="text-black"
           id="taxId"
           value={formData.taxId}
           onChange={(e) => handleChange("taxId", e.target.value)}
@@ -168,7 +173,7 @@ export function CreateCompanyForm({ onSuccess, onCancel }: CreateCompanyFormProp
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create Company
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+        <Button className="text-black" type="button" variant="outline" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
       </div>
