@@ -4,6 +4,17 @@ import jwt from "jsonwebtoken"
 
 const prisma = new PrismaClient()
 
+interface DecodedToken {
+  userId: string
+  iat?: number
+  exp?: number
+}
+
+interface DeleteAccountRequest {
+  accountId: string
+  companyId: string
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Get the authorization header
@@ -13,15 +24,15 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7)
-    let decoded: any
+    let decoded: DecodedToken
 
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key")
-    } catch (error) {
+      decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as DecodedToken
+    } catch {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const { accountId, companyId } = await request.json()
+    const { accountId, companyId }: DeleteAccountRequest = await request.json()
 
     if (!accountId) {
       return NextResponse.json({ error: "Account ID is required" }, { status: 400 })

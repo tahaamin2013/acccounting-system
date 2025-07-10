@@ -73,7 +73,7 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
 
           <div className="text-center">
             <Button variant="link" onClick={onToggleMode}>
-              Don't have an account? Sign up
+              Dont have an account? Sign up
             </Button>
           </div>
         </form>

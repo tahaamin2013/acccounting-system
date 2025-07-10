@@ -137,8 +137,9 @@ export default function LandingPage() {
             <span>AccounTech</span>
           </div>
           <nav className="hidden md:flex gap-8">
-            <Link
-              href="#features"
+            <Link 
+            
+              href="#features"   
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Features
@@ -545,7 +546,7 @@ export default function LandingPage() {
                             <Star key={j} className="size-4 text-yellow-500 fill-yellow-500" />
                           ))}
                       </div>
-                      <p className="text-lg mb-6 flex-grow">"{testimonial.quote}"</p>
+                      <p className="text-lg mb-6 flex-grow">{testimonial.quote}</p>
                       <div className="flex items-center gap-4 mt-auto pt-4 border-t border-border/40">
                         <div className="size-10 rounded-full bg-muted flex items-center justify-center text-foreground font-medium">
                           {testimonial.author.charAt(0)}

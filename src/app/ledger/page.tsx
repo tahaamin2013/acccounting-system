@@ -52,6 +52,7 @@ export default function Ledger() {
   const router = useRouter()
   const [ledgers, setLedgers] = useState<AccountLedger[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  console.log("Current Company:", accounts)
   const [loading, setLoading] = useState(true)
 
   const getAuthHeaders = () => {

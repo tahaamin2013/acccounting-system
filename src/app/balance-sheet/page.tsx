@@ -267,7 +267,7 @@ export default function BalanceSheet() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3 text-gray-900">Owner's Equity</h3>
+                  <h3 className="font-semibold mb-3 text-gray-900">Owner Equity</h3>
                   <Table>
                     <TableBody>
                       {balanceSheetData.equity.length > 0 ? (

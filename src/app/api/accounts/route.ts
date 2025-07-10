@@ -1,4 +1,3 @@
-// app/api/accounts/route.ts
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma" // Assuming you have this file
 import { verifyToken } from "@/lib/auth" // Your existing auth.ts
@@ -21,7 +20,6 @@ export async function GET(req: NextRequest) {
   }
 
   const companyId = req.nextUrl.searchParams.get("companyId")
-
   if (!companyId) {
     return NextResponse.json({ error: "Bad Request: Company ID is required as a query parameter" }, { status: 400 })
   }
@@ -54,10 +52,15 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({ accounts })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    // Changed 'any' to 'unknown'
     console.error("Error fetching accounts:", error)
+    let errorMessage = "Internal Server Error: Failed to fetch accounts"
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
     return NextResponse.json(
-      { error: "Internal Server Error: Failed to fetch accounts", details: error.message },
+      { error: errorMessage, details: errorMessage }, // Use errorMessage for details
       { status: 500 },
     )
   }
@@ -144,18 +147,23 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ message: "Account created successfully", account: newAccount }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    // Changed 'any' to 'unknown'
     console.error("Error creating account:", error)
     // Handle Prisma unique constraint violation error specifically
-    if (error.code === "P2002") {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       // Prisma error code for unique constraint violation
       return NextResponse.json(
         { error: "Conflict: An account with this code already exists for this company." },
         { status: 409 },
       )
     }
+    let errorMessage = "Internal Server Error: Failed to create account"
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
     return NextResponse.json(
-      { error: "Internal Server Error: Failed to create account", details: error.message },
+      { error: errorMessage, details: errorMessage }, // Use errorMessage for details
       { status: 500 },
     )
   }

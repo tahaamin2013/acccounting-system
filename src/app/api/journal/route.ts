@@ -1,6 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyToken, checkUserCompanyAccess, createJournalEntry, getJournalEntries } from "@/lib/auth"
 
+// Define an interface for the journal entry line structure
+interface JournalEntryLineInput {
+  account: string
+  description: string
+  debit: number | string // Allow string as it's parsed to number
+  credit: number | string // Allow string as it's parsed to number
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization")
@@ -14,7 +22,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const { companyId, date, description, reference, lines } = await request.json()
+    const { companyId, date, description, reference, lines } = (await request.json()) as {
+      companyId: string
+      date: string
+      description: string
+      reference: string
+      lines: JournalEntryLineInput[]
+    }
 
     // Validate input
     if (!companyId || !date || !description || !reference || !lines || lines.length === 0) {
@@ -28,8 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate that debits equal credits
-    const totalDebits = lines.reduce((sum: number, line: any) => sum + (Number(line.debit) || 0), 0)
-    const totalCredits = lines.reduce((sum: number, line: any) => sum + (Number(line.credit) || 0), 0)
+    const totalDebits = lines.reduce((sum: number, line: JournalEntryLineInput) => sum + (Number(line.debit) || 0), 0)
+    const totalCredits = lines.reduce((sum: number, line: JournalEntryLineInput) => sum + (Number(line.credit) || 0), 0)
 
     if (Math.abs(totalDebits - totalCredits) > 0.01) {
       return NextResponse.json({ error: "Journal entry must be balanced (debits must equal credits)" }, { status: 400 })
@@ -42,7 +56,7 @@ export async function POST(request: NextRequest) {
       date: new Date(date),
       description,
       reference,
-      lines: lines.map((line: any) => ({
+      lines: lines.map((line: JournalEntryLineInput) => ({
         accountName: line.account,
         description: line.description,
         debit: Number(line.debit) || 0,
@@ -54,9 +68,13 @@ export async function POST(request: NextRequest) {
       message: "Journal entry created successfully",
       journalEntry,
     })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Journal entry creation error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    let errorMessage = "Internal server error"
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
 
@@ -75,7 +93,6 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url)
     const companyId = url.searchParams.get("companyId")
-
     if (!companyId) {
       return NextResponse.json({ error: "Company ID is required" }, { status: 400 })
     }
@@ -87,10 +104,13 @@ export async function GET(request: NextRequest) {
     }
 
     const journalEntries = await getJournalEntries(companyId)
-
     return NextResponse.json({ journalEntries })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Get journal entries error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    let errorMessage = "Internal server error"
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

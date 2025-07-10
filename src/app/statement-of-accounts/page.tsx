@@ -14,6 +14,25 @@ import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { Navigation } from "@/components/navigation"
 
+// Define the Account interface
+interface Account {
+  id: string
+  companyId: string
+  code: string
+  name: string
+  type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE" // This is the strict type
+  isActive: boolean
+  createdAt: string // Assuming these are strings from the API
+  updatedAt: string
+}
+
+// Define an interface for the form state, where 'type' can be a generic string
+interface NewAccountFormState {
+  code: string
+  name: string
+  type: string // Allow string for form input before validation
+}
+
 const accountTypes = [
   { value: "ASSET", label: "Asset" },
   { value: "LIABILITY", label: "Liability" },
@@ -26,12 +45,13 @@ const StatementOfAccounts = () => {
   const { currentCompany } = useCompany()
   const { user } = useAuth()
   const router = useRouter()
-  const [accounts, setAccounts] = useState<any[]>([])
+
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [editingAccount, setEditingAccount] = useState<any>(null)
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [newAccount, setNewAccount] = useState({
+  const [newAccount, setNewAccount] = useState<NewAccountFormState>({
     code: "",
     name: "",
     type: "",
@@ -47,18 +67,24 @@ const StatementOfAccounts = () => {
 
   const fetchAccounts = async () => {
     if (!currentCompany) return
+
     try {
       const response = await fetch(`/api/accounts?companyId=${currentCompany.id}`, {
         headers: getAuthHeaders(),
       })
+
       if (response.ok) {
-        const data = await response.json()
+        const data: { accounts: Account[] } = await response.json() // Explicitly type the incoming data
         setAccounts(data.accounts)
       } else {
         console.error("Failed to fetch accounts, status:", response.status)
       }
-    } catch (error) {
-      console.error("Error fetching accounts:", error)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error fetching accounts:", error.message)
+      } else {
+        console.error("An unknown error occurred while fetching accounts:", error)
+      }
     } finally {
       setLoading(false)
     }
@@ -68,7 +94,6 @@ const StatementOfAccounts = () => {
     if (!confirm("Are you sure you want to delete this account? This action cannot be undone.")) {
       return
     }
-
     setDeletingId(accountId)
     try {
       const response = await fetch("/api/account-delete", {
@@ -81,27 +106,31 @@ const StatementOfAccounts = () => {
       })
 
       if (response.ok) {
-        // Remove the account from the local state
         setAccounts(accounts.filter((account) => account.id !== accountId))
         alert("Account deleted successfully!")
       } else {
         const data = await response.json()
         alert(data.error || "Failed to delete account")
       }
-    } catch (error) {
-      console.error("Error deleting account:", error)
-      alert("Failed to delete account")
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error deleting account:", error.message)
+        alert(`Failed to delete account: ${error.message}`)
+      } else {
+        console.error("An unknown error occurred while deleting account:", error)
+        alert("Failed to delete account due to an unknown error.")
+      }
     } finally {
       setDeletingId(null)
     }
   }
 
-  const editAccount = (account: any) => {
+  const editAccount = (account: Account) => {
     setEditingAccount(account)
     setNewAccount({
       code: account.code,
       name: account.name,
-      type: account.type,
+      type: account.type, // This is already a valid type from the Account object
     })
     setShowForm(true)
   }
@@ -116,22 +145,29 @@ const StatementOfAccounts = () => {
       return
     }
 
+    // Client-side validation for account type
+    const validAccountTypeValues = accountTypes.map((t) => t.value)
+    if (!validAccountTypeValues.includes(newAccount.type)) {
+      alert(`Invalid account type '${newAccount.type}'. Must be one of ${validAccountTypeValues.join(", ")}`)
+      return
+    }
+
     try {
       const isEditing = editingAccount !== null
       const url = isEditing ? "/api/account-update" : "/api/account-create"
       const body = isEditing
         ? {
-            accountId: editingAccount.id,
+            accountId: editingAccount?.id,
             companyId: currentCompany.id,
             code: newAccount.code,
             name: newAccount.name,
-            type: newAccount.type,
+            type: newAccount.type as Account["type"], // Cast after validation
           }
         : {
             companyId: currentCompany.id,
             code: newAccount.code,
             name: newAccount.name,
-            type: newAccount.type,
+            type: newAccount.type as Account["type"], // Cast after validation
           }
 
       const response = await fetch(url, {
@@ -141,24 +177,20 @@ const StatementOfAccounts = () => {
       })
 
       if (response.ok) {
-        const result = await response.json()
-
+        const result: { account: Account } = await response.json() // Explicitly type the incoming data
         if (isEditing) {
-          // Update existing account in state
           setAccounts(
             accounts.map((acc) =>
-              acc.id === editingAccount.id
-                ? { ...acc, code: newAccount.code, name: newAccount.name, type: newAccount.type }
+              acc.id === editingAccount?.id
+                ? { ...acc, code: newAccount.code, name: newAccount.name, type: newAccount.type as Account["type"] } // Cast here
                 : acc,
             ),
           )
           alert("Account updated successfully!")
         } else {
-          // Add new account to state
           setAccounts([...accounts, result.account])
           alert("Account created successfully!")
         }
-
         setNewAccount({ code: "", name: "", type: "" })
         setEditingAccount(null)
         setShowForm(false)
@@ -166,9 +198,14 @@ const StatementOfAccounts = () => {
         const errorData = await response.json()
         alert(errorData.error || `Failed to ${isEditing ? "update" : "create"} account`)
       }
-    } catch (error) {
-      console.error(`Error ${editingAccount ? "updating" : "creating"} account:`, error)
-      alert(`Network error: ${error.message}`)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error(`Error ${editingAccount ? "updating" : "creating"} account:`, error.message)
+        alert(`Network error: ${error.message}`)
+      } else {
+        console.error(`An unknown error occurred while ${editingAccount ? "updating" : "creating"} account:`, error)
+        alert(`Network error: An unknown error occurred.`)
+      }
     }
   }
 
@@ -237,9 +274,7 @@ const StatementOfAccounts = () => {
           <h1 className="text-4xl font-bold mb-2 text-gray-900">Chart of Accounts</h1>
           <p className="text-gray-600 text-lg">{currentCompany.name} • Manage your account structure</p>
         </div>
-
         <Navigation />
-
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div className="flex gap-4">
@@ -256,7 +291,6 @@ const StatementOfAccounts = () => {
                   </div>
                 </CardContent>
               </Card>
-
               <Card className="border-blue-200 bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
@@ -271,13 +305,11 @@ const StatementOfAccounts = () => {
                 </CardContent>
               </Card>
             </div>
-
             <Button onClick={() => setShowForm(!showForm)} className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               New Account
             </Button>
           </div>
-
           {showForm && (
             <Card className="border-blue-200 bg-white shadow-sm">
               <CardHeader>
@@ -336,7 +368,6 @@ const StatementOfAccounts = () => {
                     </Select>
                   </div>
                 </div>
-
                 <div className="flex gap-4">
                   <Button onClick={saveAccount} className="bg-blue-600 hover:bg-blue-700 text-white">
                     <Check className="h-4 w-4 mr-2" />
@@ -354,7 +385,6 @@ const StatementOfAccounts = () => {
               </CardContent>
             </Card>
           )}
-
           {groupedAccounts.map((group) => (
             <Card key={group.value} className="border-blue-200 bg-white shadow-sm">
               <CardHeader>
